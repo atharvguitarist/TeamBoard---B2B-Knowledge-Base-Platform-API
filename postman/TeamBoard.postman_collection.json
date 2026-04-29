@@ -1,0 +1,168 @@
+{
+  "info": {
+    "name": "TeamBoard - B2B Knowledge Base API Platform",
+    "description": "Postman collection for the TeamBoard Django DRF backend. Covers registration, login, protected KB query, zero-result logging, and admin usage summary scenarios.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://127.0.0.1:8000" },
+    { "key": "client_username", "value": "acmecorp" },
+    { "key": "client_password", "value": "securepass123" },
+    { "key": "access_token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "01 Register company - success",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{client_username}}\",\n  \"password\": \"{{client_password}}\",\n  \"company_name\": \"Acme Corp\",\n  \"email\": \"dev@acmecorp.com\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/auth/register/", "host": ["{{base_url}}"], "path": ["api", "auth", "register", ""] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+              "const json = pm.response.json();",
+              "pm.test('returns access token and api key', function () { pm.expect(json.access).to.exist; pm.expect(json.api_key).to.exist; });",
+              "if (json.access) pm.collectionVariables.set('access_token', json.access);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Register duplicate username - returns 400",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{client_username}}\",\n  \"password\": \"{{client_password}}\",\n  \"company_name\": \"Acme Corp Duplicate\",\n  \"email\": \"duplicate@acmecorp.com\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/auth/register/", "host": ["{{base_url}}"], "path": ["api", "auth", "register", ""] }
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('status is 400', function () { pm.response.to.have.status(400); });"] } }]
+    },
+    {
+      "name": "03 Login company - success",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{client_username}}\",\n  \"password\": \"{{client_password}}\"\n}" },
+        "url": { "raw": "{{base_url}}/api/auth/login/", "host": ["{{base_url}}"], "path": ["api", "auth", "login", ""] }
+      },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+          "const json = pm.response.json();",
+          "pm.test('returns access, company_name, api_key', function () { pm.expect(json.access).to.exist; pm.expect(json.company_name).to.exist; pm.expect(json.api_key).to.exist; });",
+          "if (json.access) pm.collectionVariables.set('access_token', json.access);"
+        ] } }
+      ]
+    },
+    {
+      "name": "04 Login invalid credentials - returns 401",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{client_username}}\",\n  \"password\": \"wrongpassword\"\n}" },
+        "url": { "raw": "{{base_url}}/api/auth/login/", "host": ["{{base_url}}"], "path": ["api", "auth", "login", ""] }
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('status is 401', function () { pm.response.to.have.status(401); });"] } }]
+    },
+    {
+      "name": "05 Query KB without token - returns 401",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"search\": \"select_related\"\n}" },
+        "url": { "raw": "{{base_url}}/api/kb/query/", "host": ["{{base_url}}"], "path": ["api", "kb", "query", ""] }
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('status is 401', function () { pm.response.to.have.status(401); });"] } }]
+    },
+    {
+      "name": "06 Query KB blank search - returns 400",
+      "request": {
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"search\": \"   \"\n}" },
+        "url": { "raw": "{{base_url}}/api/kb/query/", "host": ["{{base_url}}"], "path": ["api", "kb", "query", ""] }
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('status is 400', function () { pm.response.to.have.status(400); });"] } }]
+    },
+    {
+      "name": "07 Query KB matching results - returns 200",
+      "request": {
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"search\": \"select_related\"\n}" },
+        "url": { "raw": "{{base_url}}/api/kb/query/", "host": ["{{base_url}}"], "path": ["api", "kb", "query", ""] }
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+        "const json = pm.response.json();",
+        "pm.test('has count and results array', function () { pm.expect(json.count).to.be.a('number'); pm.expect(json.results).to.be.an('array'); });"
+      ] } }]
+    },
+    {
+      "name": "08 Query KB zero results - still returns 200 and logs",
+      "request": {
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"search\": \"a-term-that-does-not-exist\"\n}" },
+        "url": { "raw": "{{base_url}}/api/kb/query/", "host": ["{{base_url}}"], "path": ["api", "kb", "query", ""] }
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+        "const json = pm.response.json();",
+        "pm.test('zero results response shape is correct', function () { pm.expect(json.count).to.eql(0); pm.expect(json.results).to.eql([]); });"
+      ] } }]
+    },
+    {
+      "name": "09 Admin usage summary as client - returns 403",
+      "request": {
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{base_url}}/api/admin/usage-summary/", "host": ["{{base_url}}"], "path": ["api", "admin", "usage-summary", ""] }
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('status is 403 for client role', function () { pm.response.to.have.status(403); });"] } }]
+    },
+    {
+      "name": "10 Admin usage summary as admin - returns 200",
+      "request": {
+        "description": "Before running this request, change the registered company role to admin in Django shell or database, then run Login again to refresh the token.",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{base_url}}/api/admin/usage-summary/", "host": ["{{base_url}}"], "path": ["api", "admin", "usage-summary", ""] }
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status is 200 after role is admin', function () { pm.response.to.have.status(200); });",
+        "const json = pm.response.json();",
+        "pm.test('summary fields exist', function () { pm.expect(json.total_queries).to.be.a('number'); pm.expect(json.active_companies).to.be.a('number'); pm.expect(json.top_search_terms).to.be.an('array'); });"
+      ] } }]
+    },
+    {
+      "name": "11 Query another common term to populate top search terms",
+      "request": {
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"search\": \"transaction atomic\"\n}" },
+        "url": { "raw": "{{base_url}}/api/kb/query/", "host": ["{{base_url}}"], "path": ["api", "kb", "query", ""] }
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('status is 200', function () { pm.response.to.have.status(200); });"] } }]
+    }
+  ]
+}

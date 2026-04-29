@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: teamboard_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-teamboard_db}
+      POSTGRES_USER: ${POSTGRES_USER:-teamboard_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-teamboard_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - teamboard_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-teamboard_user} -d ${POSTGRES_DB:-teamboard_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  teamboard_postgres_data:
