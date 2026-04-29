@@ -323,16 +323,6 @@ The collection includes these scenarios:
 10. Admin usage summary as admin returns 200
 11. Query another common term to populate top search terms
 
-## GitHub push checklist
-
-```bash
-git init
-git add .
-git commit -m "Build TeamBoard B2B knowledge base API"
-git branch -M main
-git remote add origin <your-github-repo-url>
-git push -u origin main
-```
 
 ## Grading alignment checklist
 
